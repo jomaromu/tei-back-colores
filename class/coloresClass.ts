@@ -14,12 +14,14 @@ export class ColoresClass {
 
   crearColor(req: any, resp: Response): void {
     const idCreador = new mongoose.Types.ObjectId(req.usuario._id);
+    const foranea = new mongoose.Types.ObjectId(req.body.foranea);
     const nombre: string = req.body.nombre;
     const estado: boolean = req.body.estado;
     const color: string = req.body.color;
 
     const nuevoColor = new coloresModel({
       idCreador,
+      foranea,
       nombre,
       color,
       estado,
@@ -47,8 +49,9 @@ export class ColoresClass {
   }
 
   obtenerColores(req: any, resp: Response): void {
+    const foranea = new mongoose.Types.ObjectId(req.get("foranea"));
     coloresModel
-      .find({})
+      .find({ foranea })
       .populate("idCreador")
       .exec((err: CallbackError, coloresDB: Array<Colores>) => {
         if (err) {
@@ -67,7 +70,8 @@ export class ColoresClass {
   }
 
   editarColor(req: any, resp: Response): void {
-    const id = new mongoose.Types.ObjectId(req.get("id") || "");
+    const _id = new mongoose.Types.ObjectId(req.body.id);
+    const foranea = new mongoose.Types.ObjectId(req.body.foranea);
     const estado: boolean = req.body.estado;
 
     const query = {
@@ -76,62 +80,66 @@ export class ColoresClass {
       estado,
     };
 
-    coloresModel.findById(id, (err: CallbackError, colorDB: Colores) => {
-      if (err) {
-        return resp.json({
-          ok: false,
-          mensaje: `Error interno`,
-          err,
-        });
-      }
-
-      if (!colorDB) {
-        return resp.json({
-          ok: false,
-          mensaje: `No se encontró un color con ese ID en la base de datos`,
-        });
-      }
-
-      if (!query.nombre) {
-        query.nombre = colorDB.nombre;
-      }
-
-      if (!query.color) {
-        query.color = colorDB.color;
-      }
-
-      coloresModel.findByIdAndUpdate(
-        id,
-        query,
-        { new: true },
-        (err: CallbackError, colorDB: any) => {
-          if (err) {
-            return resp.json({
-              ok: false,
-              mensaje: `Error interno`,
-              err,
-            });
-          } else {
-            const server = Server.instance;
-            server.io.emit("cargar-colores", {
-              ok: true,
-            });
-            return resp.json({
-              ok: true,
-              mensaje: `color actualizado`,
-              colorDB,
-            });
-          }
+    coloresModel.findOne(
+      { _id, foranea },
+      (err: CallbackError, colorDB: Colores) => {
+        if (err) {
+          return resp.json({
+            ok: false,
+            mensaje: `Error interno`,
+            err,
+          });
         }
-      );
-    });
+
+        // if (!colorDB) {
+        //   return resp.json({
+        //     ok: false,
+        //     mensaje: `No se encontró un color con ese ID en la base de datos`,
+        //   });
+        // }
+
+        if (!query.nombre) {
+          query.nombre = colorDB.nombre;
+        }
+
+        if (!query.color) {
+          query.color = colorDB.color;
+        }
+
+        coloresModel.findOneAndUpdate(
+          { _id, foranea },
+          query,
+          { new: true },
+          (err: CallbackError, colorDB: any) => {
+            if (err) {
+              return resp.json({
+                ok: false,
+                mensaje: `Error interno`,
+                err,
+              });
+            } else {
+              const server = Server.instance;
+              server.io.emit("cargar-colores", {
+                ok: true,
+              });
+              return resp.json({
+                ok: true,
+                mensaje: `color actualizado`,
+                colorDB,
+              });
+            }
+          }
+        );
+      }
+    );
   }
 
   eliminarColor(req: any, resp: Response): void {
-    const id = new mongoose.Types.ObjectId(req.get("id") || "");
+    const _id = new mongoose.Types.ObjectId(req.get("id"));
+    const foranea = new mongoose.Types.ObjectId(req.get("foranea"));
 
-    coloresModel.findByIdAndDelete(
-      id,
+    coloresModel.findOneAndDelete(
+      { _id, foranea },
       {},
       (err: CallbackError, colorDB: any) => {
         if (err) {

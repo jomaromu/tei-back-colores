@@ -4,4 +4,5 @@ export interface Colores {
     nombre: string;
     estado: boolean;
     color: string;
+    foranea: string;
 }
